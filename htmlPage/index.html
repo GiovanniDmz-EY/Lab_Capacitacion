@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GET Request Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #00d4ff;
+            font-size: 1.8rem;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        #urlInput {
+            flex: 1;
+            padding: 12px 16px;
+            font-size: 1rem;
+            border: 2px solid #333;
+            border-radius: 8px;
+            background: #16213e;
+            color: #e0e0e0;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        #urlInput:focus {
+            border-color: #00d4ff;
+        }
+
+        #sendBtn {
+            padding: 12px 28px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            background: #00d4ff;
+            color: #1a1a2e;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.1s;
+            white-space: nowrap;
+        }
+
+        #sendBtn:hover {
+            background: #00b8d9;
+        }
+
+        #sendBtn:active {
+            transform: scale(0.97);
+        }
+
+        #sendBtn:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        .status-bar {
+            display: none;
+            margin-bottom: 15px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .status-bar.success {
+            display: block;
+            background: #0a3d0a;
+            color: #4caf50;
+            border: 1px solid #4caf50;
+        }
+
+        .status-bar.error {
+            display: block;
+            background: #3d0a0a;
+            color: #f44336;
+            border: 1px solid #f44336;
+        }
+
+        .status-bar.loading {
+            display: block;
+            background: #1a1a3e;
+            color: #ffeb3b;
+            border: 1px solid #ffeb3b;
+        }
+
+        .response-section {
+            background: #16213e;
+            border: 2px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .response-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #0f3460;
+        }
+
+        .response-header span {
+            font-weight: 600;
+            color: #00d4ff;
+        }
+
+        #copyBtn {
+            padding: 6px 14px;
+            font-size: 0.8rem;
+            border: 1px solid #00d4ff;
+            border-radius: 6px;
+            background: transparent;
+            color: #00d4ff;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        #copyBtn:hover {
+            background: rgba(0, 212, 255, 0.15);
+        }
+
+        #responseBody {
+            padding: 16px;
+            min-height: 300px;
+            max-height: 70vh;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>GET Request Tester</h1>
+
+        <div class="input-group">
+            <input type="text" id="urlInput" placeholder="https://jsonplaceholder.typicode.com/posts/1" />
+            <button id="sendBtn">Enviar GET</button>
+        </div>
+
+        <div id="statusBar" class="status-bar"></div>
+
+        <div class="response-section">
+            <div class="response-header">
+                <span>Response</span>
+                <button id="copyBtn">Copiar</button>
+            </div>
+            <pre id="responseBody">El response aparecerá aquí...</pre>
+        </div>
+    </div>
+
+    <script>
+        const urlInput = document.getElementById('urlInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const statusBar = document.getElementById('statusBar');
+        const responseBody = document.getElementById('responseBody');
+        const copyBtn = document.getElementById('copyBtn');
+
+        sendBtn.addEventListener('click', makeRequest);
+        urlInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') makeRequest();
+        });
+
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(responseBody.textContent);
+            copyBtn.textContent = '¡Copiado!';
+            setTimeout(() => copyBtn.textContent = 'Copiar', 1500);
+        });
+
+        async function makeRequest() {
+            const url = urlInput.value.trim();
+            if (!url) {
+                setStatus('Ingresa una URL válida', 'error');
+                return;
+            }
+
+            sendBtn.disabled = true;
+            setStatus('Cargando...', 'loading');
+            responseBody.textContent = '';
+
+            try {
+                const response = await fetch(url);
+                const contentType = response.headers.get('content-type') || '';
+                let body;
+
+                if (contentType.includes('application/json')) {
+                    body = JSON.stringify(await response.json(), null, 2);
+                } else {
+                    body = await response.text();
+                }
+
+                responseBody.textContent = body;
+                setStatus(`Status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+            } catch (err) {
+                responseBody.textContent = err.message;
+                setStatus('Error en la petición', 'error');
+            } finally {
+                sendBtn.disabled = false;
+            }
+        }
+
+        function setStatus(msg, type) {
+            statusBar.textContent = msg;
+            statusBar.className = 'status-bar ' + type;
+        }
+    </script>
+</body>
+</html>
