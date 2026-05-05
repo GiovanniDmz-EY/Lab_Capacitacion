@@ -104,6 +104,9 @@ ENV/
 env.bak/
 venv.bak/
 .vscode
+__pycache__/
+*.py[cod]
+*.log
 
 
 # Spyder project settings
